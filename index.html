@@ -402,6 +402,26 @@ i.fa-solid:empty::before, i.fa-regular:empty::before{
 }
 .section-sub{ font-size: 12.5px; color: var(--ink-soft); margin:4px 0 0; }
 
+#loading-state{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding: 90px 30px;
+  gap:18px;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+.loading-spinner{
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--petrol);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
 #empty-state{
   display:flex;
   flex-direction:column;
@@ -534,14 +554,15 @@ i.fa-solid:empty::before, i.fa-regular:empty::before{
 table.data-table{
   width:100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
+  table-layout: auto;
 }
 table.data-table thead th{
   text-align:left;
-  padding: 10px 14px;
-  font-size: 11px;
+  padding: 8px 8px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.4px;
   color: var(--ink-soft);
   font-weight: 600;
   border-bottom: 1.5px solid var(--line);
@@ -550,9 +571,9 @@ table.data-table thead th{
   user-select:none;
 }
 table.data-table thead th:hover{ color: var(--petrol); }
-table.data-table thead th i{ margin-left:5px; font-size:9px; opacity:0.6; }
+table.data-table thead th i{ margin-left:4px; font-size:8px; opacity:0.6; }
 table.data-table tbody td{
-  padding: 11px 14px;
+  padding: 7px 8px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
   white-space:nowrap;
@@ -564,17 +585,17 @@ table.data-table .cell-sub{ color: var(--ink-soft); font-size:12.5px; }
 .th-actions{ width: 70px; text-align: center; }
 .cell-actions{ text-align: center; white-space: nowrap; }
 .row-action-btn{
-  width: 28px; height: 28px;
-  border-radius: 7px;
+  width: 24px; height: 24px;
+  border-radius: 6px;
   border: 1px solid var(--line);
   background: var(--paper-raised);
   color: var(--ink-soft);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   font-family: var(--font-body);
   line-height: 1;
-  margin: 0 2px;
+  margin: 0 1px;
   display: inline-flex; align-items:center; justify-content:center;
 }
 .row-action-btn:hover{ background: var(--petrol-tint); color: var(--petrol); border-color: var(--petrol); }
@@ -840,7 +861,7 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
 .saldo-stat .num{ font-family: var(--font-display); font-size:22px; font-weight:600; line-height:1; }
 .saldo-stat .lbl{ font-size:11.5px; color: var(--ink-soft); margin-top:2px; }
 
-.saldo-bar-track{ width:100px; height:7px; border-radius:4px; background: var(--line); overflow:hidden; }
+.saldo-bar-track{ width:60px; height:6px; border-radius:4px; background: var(--line); overflow:hidden; }
 .saldo-bar-fill{ height:100%; border-radius:4px; }
 
 /* ============================================================
@@ -898,7 +919,12 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
     </header>
 
     <main class="content">
-      <div id="empty-state">
+      <div id="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Carregando dados…</p>
+      </div>
+
+      <div id="empty-state" style="display:none;">
         <div class="stamp"><i class="fa-solid fa-umbrella-beach"></i></div>
         <h2>Não foi possível carregar os dados</h2>
         <p>Não conseguimos conectar ao banco de dados compartilhado nem aos dados de segurança pré-carregados. Você pode carregar manualmente o arquivo de controle de férias (.xlsx) com as abas <strong>Agendamento</strong> e <strong>Controle</strong> enquanto isso é resolvido.</p>
@@ -969,7 +995,6 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
                     <th data-key="total_dias">Dias <span class="sort-icon" data-sort-icon="default"></span></th>
                     <th data-key="substituto">Substituto <span class="sort-icon" data-sort-icon="default"></span></th>
                     <th class="th-actions">Ações</th>
-                    <th data-key="saldo">Saldo (ano fiscal) <span class="sort-icon" data-sort-icon="default"></span></th>
                     <th data-key="status">Status <span class="sort-icon" data-sort-icon="default"></span></th>
                   </tr>
                 </thead>
@@ -1052,10 +1077,12 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
                   <tr>
                     <th>Profissional</th>
                     <th>Projeto</th>
-                    <th>Saldo (ano fiscal)</th>
-                    <th>Dias já programados</th>
-                    <th>Dias restantes</th>
+                    <th>Início A&amp;M</th>
+                    <th>Saldo (FY)</th>
+                    <th>Programados</th>
+                    <th>Restantes</th>
                     <th>Situação</th>
+                    <th class="th-actions">Ações</th>
                   </tr>
                 </thead>
                 <tbody id="saldo-body"></tbody>
@@ -1220,6 +1247,43 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
       <div class="form-actions">
         <button type="button" class="btn" id="edit-record-cancel">Cancelar</button>
         <button type="submit" class="btn btn-primary" id="edit-record-submit"><i class="fa-solid fa-floppy-disk"></i> Salvar alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="popup-overlay" id="edit-saldo-overlay">
+  <div class="popup-card form-card">
+    <h3><span>Editar saldo de férias</span><button id="edit-saldo-close" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></h3>
+
+    <form id="edit-saldo-form">
+      <input type="hidden" id="es-id">
+
+      <label class="form-label">Profissional</label>
+      <input type="text" id="es-nome" class="form-input" disabled>
+
+      <label class="form-label">Projeto</label>
+      <input type="text" id="es-frente" class="form-input">
+
+      <label class="form-label">Data base</label>
+      <input type="date" id="es-data-base" class="form-input">
+
+      <div class="form-row">
+        <div>
+          <label class="form-label">Dias gozados</label>
+          <input type="number" id="es-dias-gozados" class="form-input" step="1" min="0">
+        </div>
+        <div>
+          <label class="form-label">Saldo (ano fiscal) *</label>
+          <input type="number" id="es-saldo-base" class="form-input" step="1" min="0" required>
+        </div>
+      </div>
+
+      <p class="form-error" id="edit-saldo-form-error"></p>
+
+      <div class="form-actions">
+        <button type="button" class="btn" id="edit-saldo-cancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="edit-saldo-submit"><i class="fa-solid fa-floppy-disk"></i> Salvar alterações</button>
       </div>
     </form>
   </div>
@@ -1628,11 +1692,10 @@ var ADMIN_PASSWORD = "admin2026";
     const tbody = document.getElementById('table-body');
 
     if (!filtered.length) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Nenhum registro encontrado com os filtros atuais.</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">Nenhum registro encontrado com os filtros atuais.</td></tr>`;
     } else {
       tbody.innerHTML = filtered.map(rec => {
         const status = getStatus(rec);
-        const saldo = getSaldo(rec.nome);
         const actions = rec.dbId
           ? `<button class="row-action-btn" data-action="edit" data-id="${escapeAttr(rec.dbId)}" title="Editar">${ICON_EDIT_SVG}</button>
              <button class="row-action-btn row-action-danger" data-action="delete" data-id="${escapeAttr(rec.dbId)}" title="Excluir">${ICON_DELETE_SVG}</button>`
@@ -1645,7 +1708,6 @@ var ADMIN_PASSWORD = "admin2026";
           <td class="cell-days">${rec.totalDias}</td>
           <td class="cell-sub">${rec.substituto ? escapeHtml(rec.substituto) : '<em>—</em>'}</td>
           <td class="cell-actions">${actions}</td>
-          <td class="cell-days">${saldo !== null ? saldo : '—'}</td>
           <td>${statusBadge(status)}</td>
         </tr>`;
       }).join('');
@@ -1855,7 +1917,7 @@ var ADMIN_PASSWORD = "admin2026";
         .filter(r => r.nome === nome && getStatus(r) !== 'ended')
         .reduce((sum, r) => sum + (r.totalDias || 0), 0);
       const restante = saldo !== null ? Math.max(saldo - programados, 0) : null;
-      return { nome, frente, saldo, programados, restante, situacao: saldoSituacao(saldo) };
+      return { nome, frente, saldo, programados, restante, situacao: saldoSituacao(saldo), dbId: entry.dbId || null, dataBase: entry.dataBase || null };
     });
 
     // resumo
@@ -1880,9 +1942,14 @@ var ADMIN_PASSWORD = "admin2026";
       const badgeText = { ok: 'Saudável', warn: 'Atenção', crit: 'Alto', pending: 'Sem dado' }[r.situacao];
       const pct = r.saldo !== null ? Math.min(100, (r.saldo / 30) * 100) : 0;
       const barColor = { ok: 'var(--ok)', warn: 'var(--warn)', crit: 'var(--crit)', pending: 'var(--line)' }[r.situacao];
+      const actions = r.dbId
+        ? `<button class="row-action-btn" data-action="edit-saldo" data-id="${escapeAttr(r.dbId)}" title="Editar">${ICON_EDIT_SVG}</button>
+           <button class="row-action-btn row-action-danger" data-action="delete-saldo" data-id="${escapeAttr(r.dbId)}" title="Excluir">${ICON_DELETE_SVG}</button>`
+        : '';
       return `<tr>
         <td class="cell-name">${escapeHtml(r.nome)}</td>
         <td>${escapeHtml(r.frente)}</td>
+        <td class="cell-days">${r.dataBase ? fmtDate(r.dataBase) : '—'}</td>
         <td class="cell-days">
           <div style="display:flex;align-items:center;gap:8px;">
             <span>${r.saldo !== null ? r.saldo : '—'}</span>
@@ -1892,8 +1959,9 @@ var ADMIN_PASSWORD = "admin2026";
         <td class="cell-days">${r.programados}</td>
         <td class="cell-days">${r.restante !== null ? r.restante : '—'}</td>
         <td><span class="badge ${badgeCls}">${badgeIcon} ${badgeText}</span></td>
+        <td class="cell-actions">${actions}</td>
       </tr>`;
-    }).join('') : `<tr class="empty-row"><td colspan="6">Nenhum dado de saldo encontrado.</td></tr>`;
+    }).join('') : `<tr class="empty-row"><td colspan="8">Nenhum dado de saldo encontrado.</td></tr>`;
   }
 
   /* ----------------------------------------------------------
@@ -2207,7 +2275,8 @@ var ADMIN_PASSWORD = "admin2026";
           frente: row.frente || '',
           dataBase: row.data_base ? stripTime(new Date(row.data_base + 'T00:00:00')) : null,
           diasGozados: (typeof row.dias_gozados === 'number') ? row.dias_gozados : 0,
-          saldoBase: (typeof row.saldo_base === 'number') ? row.saldo_base : null
+          saldoBase: (typeof row.saldo_base === 'number') ? row.saldo_base : null,
+          dbId: row.id
         };
       });
       return map;
@@ -2292,6 +2361,41 @@ var ADMIN_PASSWORD = "admin2026";
     if (!resp.ok) {
       const text = await resp.text().catch(() => '');
       throw new Error('Falha ao excluir (' + resp.status + '). ' + text);
+    }
+    return true;
+  }
+
+  // Atualiza um registro de saldo existente (por id) na tabela compartilhada.
+  async function updateSaldoRecord(id, payload) {
+    if (!supabaseConfigured()) {
+      throw new Error('Banco de dados não configurado neste painel.');
+    }
+    const url = SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/' + SUPABASE_SALDOS_TABLE + '?id=eq.' + encodeURIComponent(id);
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: Object.assign({ 'Prefer': 'return=representation' }, supabaseHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error('Falha ao atualizar saldo (' + resp.status + '). ' + text);
+    }
+    return resp.json();
+  }
+
+  // Exclui um registro de saldo existente (por id) da tabela compartilhada.
+  async function deleteSaldoRecord(id) {
+    if (!supabaseConfigured()) {
+      throw new Error('Banco de dados não configurado neste painel.');
+    }
+    const url = SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/' + SUPABASE_SALDOS_TABLE + '?id=eq.' + encodeURIComponent(id);
+    const resp = await fetch(url, {
+      method: 'DELETE',
+      headers: supabaseHeaders()
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error('Falha ao excluir saldo (' + resp.status + '). ' + text);
     }
     return true;
   }
@@ -2538,11 +2642,7 @@ var ADMIN_PASSWORD = "admin2026";
     const action = pendingAdminAction;
     closeAdminPasswordModal();
     if (!action) return;
-    if (action.action === 'edit') {
-      openEditRecordModal(action.id);
-    } else if (action.action === 'delete') {
-      runDeleteRecord(action.id);
-    }
+    runAdminAction(action.action, action.id);
   }
 
   function findDbRecordById(id) {
@@ -2686,6 +2786,87 @@ var ADMIN_PASSWORD = "admin2026";
     }
   }
 
+  // Encontra a entrada de saldo (com dbId) correspondente a um id, dentro
+  // do state.saldoMap atual.
+  function findSaldoEntryById(id) {
+    for (const nome in state.saldoMap) {
+      if (String(state.saldoMap[nome].dbId) === String(id)) {
+        return { nome, ...state.saldoMap[nome] };
+      }
+    }
+    return null;
+  }
+
+  function openEditSaldoModal(id) {
+    const entry = findSaldoEntryById(id);
+    if (!entry) { alert('Registro de saldo não encontrado. Atualize a página e tente novamente.'); return; }
+
+    document.getElementById('es-id').value = id;
+    document.getElementById('edit-saldo-form-error').textContent = '';
+    document.getElementById('es-nome').value = entry.nome;
+    document.getElementById('es-frente').value = entry.frente || '';
+    document.getElementById('es-data-base').value = entry.dataBase ? toInputDate(entry.dataBase) : '';
+    document.getElementById('es-dias-gozados').value = entry.diasGozados ?? 0;
+    document.getElementById('es-saldo-base').value = entry.saldoBase ?? '';
+
+    document.getElementById('edit-saldo-overlay').classList.add('visible');
+  }
+
+  function closeEditSaldoModal() {
+    document.getElementById('edit-saldo-overlay').classList.remove('visible');
+  }
+
+  async function submitEditSaldo(e) {
+    e.preventDefault();
+    const errorEl = document.getElementById('edit-saldo-form-error');
+    errorEl.textContent = '';
+
+    const id = document.getElementById('es-id').value;
+    const frente = document.getElementById('es-frente').value.trim();
+    const dataBase = document.getElementById('es-data-base').value;
+    const diasGozados = document.getElementById('es-dias-gozados').value;
+    const saldoBase = document.getElementById('es-saldo-base').value;
+
+    if (saldoBase === '') {
+      errorEl.textContent = 'Informe o saldo (ano fiscal).';
+      return;
+    }
+
+    const submitBtn = document.getElementById('edit-saldo-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando…';
+
+    try {
+      await updateSaldoRecord(id, {
+        frente: frente || null,
+        data_base: dataBase || null,
+        dias_gozados: diasGozados !== '' ? Number(diasGozados) : 0,
+        saldo_base: Number(saldoBase)
+      });
+      closeEditSaldoModal();
+      await refreshDbRecords();
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = 'Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar alterações';
+    }
+  }
+
+  async function runDeleteSaldo(id) {
+    const entry = findSaldoEntryById(id);
+    const nomeRef = entry ? entry.nome : 'este registro';
+    if (!confirm(`Tem certeza que deseja excluir o saldo de "${nomeRef}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await deleteSaldoRecord(id);
+      await refreshDbRecords();
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível excluir o registro de saldo. Verifique sua conexão e tente novamente.');
+    }
+  }
+
   // Delegação de clique nos botões de ação (editar/excluir) da tabela.
   function handleTableActionClick(e) {
     const btn = e.target.closest('.row-action-btn');
@@ -2693,11 +2874,19 @@ var ADMIN_PASSWORD = "admin2026";
     const action = btn.dataset.action;
     const id = btn.dataset.id;
     if (state.adminUnlocked) {
-      if (action === 'edit') openEditRecordModal(id);
-      else if (action === 'delete') runDeleteRecord(id);
+      runAdminAction(action, id);
     } else {
       openAdminPasswordModal(action, id);
     }
+  }
+
+  // Executa a ação de administração já desbloqueada (chamada direta ou
+  // após validar a senha admin), cobrindo agendamentos e saldos.
+  function runAdminAction(action, id) {
+    if (action === 'edit') openEditRecordModal(id);
+    else if (action === 'delete') runDeleteRecord(id);
+    else if (action === 'edit-saldo') openEditSaldoModal(id);
+    else if (action === 'delete-saldo') runDeleteSaldo(id);
   }
 
   /* ----------------------------------------------------------
@@ -2887,6 +3076,7 @@ var ADMIN_PASSWORD = "admin2026";
 
     // administração: editar/excluir (protegido por senha admin)
     document.getElementById('table-body').addEventListener('click', handleTableActionClick);
+    document.getElementById('saldo-body').addEventListener('click', handleTableActionClick);
     document.getElementById('admin-password-submit').addEventListener('click', submitAdminPassword);
     document.getElementById('admin-password-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); submitAdminPassword(); }
@@ -2908,6 +3098,14 @@ var ADMIN_PASSWORD = "admin2026";
     document.getElementById('er-projeto-novo-toggle').addEventListener('change', (e) => {
       document.getElementById('er-projeto-novo').style.display = e.target.checked ? 'block' : 'none';
     });
+
+    // edição de saldo de férias
+    document.getElementById('edit-saldo-close').addEventListener('click', closeEditSaldoModal);
+    document.getElementById('edit-saldo-cancel').addEventListener('click', closeEditSaldoModal);
+    document.getElementById('edit-saldo-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'edit-saldo-overlay') closeEditSaldoModal();
+    });
+    document.getElementById('edit-saldo-form').addEventListener('submit', submitEditSaldo);
 
     // exportações
     document.getElementById('btn-export-excel').addEventListener('click', exportTableToExcel);
@@ -2943,6 +3141,7 @@ var ADMIN_PASSWORD = "admin2026";
           populateTableFilters();
           renderAll();
           updateDataSourceInfo();
+          document.getElementById('loading-state').style.display = 'none';
           document.getElementById('empty-state').style.display = 'none';
           document.getElementById('dashboard').classList.add('visible');
           loadedFromDb = true;
@@ -2955,7 +3154,11 @@ var ADMIN_PASSWORD = "admin2026";
     // Caso o banco esteja vazio ou indisponível, recorre aos dados
     // pré-carregados embutidos no HTML como camada de segurança.
     if (!loadedFromDb) {
-      loadEmbeddedData();
+      const embeddedOk = loadEmbeddedData();
+      document.getElementById('loading-state').style.display = 'none';
+      if (!embeddedOk) {
+        document.getElementById('empty-state').style.display = 'flex';
+      }
     }
   }
 
