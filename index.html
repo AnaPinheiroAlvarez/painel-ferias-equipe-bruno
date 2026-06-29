@@ -582,7 +582,7 @@ table.data-table tbody tr{ transition: background 0.12s ease; }
 table.data-table tbody tr:hover{ background: var(--petrol-tint); }
 table.data-table .cell-name{ font-weight: 600; }
 table.data-table .cell-sub{ color: var(--ink-soft); font-size:12.5px; }
-.th-actions{ width: 70px; text-align: center; }
+.th-actions{ width: 70px; text-align: center; cursor: default !important; }
 .cell-actions{ text-align: center; white-space: nowrap; }
 .row-action-btn{
   width: 24px; height: 24px;
@@ -1056,12 +1056,16 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
         <section class="section" id="sec-saldo">
           <div class="section-head">
             <div>
-              <h2><i class="fa-solid fa-scale-balanced"></i> Saldo de férias - FY 2026</h2>
+              <h2><i class="fa-solid fa-scale-balanced"></i> Saldo de férias</h2>
             </div>
           </div>
           <div class="panel">
             <div class="saldo-grid" id="saldo-summary"></div>
             <div class="filter-bar">
+              <div class="filter-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" class="table-search" id="saldo-search" placeholder="Buscar nome…">
+              </div>
               <select id="filter-saldo-status">
                 <option value="">Situação: todas</option>
                 <option value="ok">Saudável (&lt;10 dias)</option>
@@ -1075,13 +1079,13 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
               <table class="data-table" id="saldo-table">
                 <thead>
                   <tr>
-                    <th>Profissional</th>
-                    <th>Projeto</th>
-                    <th>Início A&amp;M</th>
-                    <th>Saldo (FY)</th>
-                    <th>Programados</th>
-                    <th>Restantes</th>
-                    <th>Situação</th>
+                    <th data-key="nome">Profissional <span class="sort-icon" data-sort-icon="default"></span></th>
+                    <th data-key="frente">Projeto <span class="sort-icon" data-sort-icon="default"></span></th>
+                    <th data-key="dataBase">Início A&amp;M <span class="sort-icon" data-sort-icon="default"></span></th>
+                    <th data-key="programados">Programados <span class="sort-icon" data-sort-icon="default"></span></th>
+                    <th data-key="saldo">Saldo <span class="sort-icon" data-sort-icon="default"></span></th>
+                    <th data-key="ano">Ano <span class="sort-icon" data-sort-icon="default"></span></th>
+                    <th data-key="situacao">Situação <span class="sort-icon" data-sort-icon="default"></span></th>
                     <th class="th-actions">Ações</th>
                   </tr>
                 </thead>
@@ -1259,8 +1263,8 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
     <form id="edit-saldo-form">
       <input type="hidden" id="es-id">
 
-      <label class="form-label">Profissional</label>
-      <input type="text" id="es-nome" class="form-input" disabled>
+      <label class="form-label">Profissional *</label>
+      <input type="text" id="es-nome" class="form-input" required>
 
       <label class="form-label">Projeto</label>
       <input type="text" id="es-frente" class="form-input">
@@ -1274,10 +1278,13 @@ textarea.form-input{ resize: vertical; font-family: var(--font-body); }
           <input type="number" id="es-dias-gozados" class="form-input" step="1" min="0">
         </div>
         <div>
-          <label class="form-label">Saldo (ano fiscal) *</label>
+          <label class="form-label">Saldo *</label>
           <input type="number" id="es-saldo-base" class="form-input" step="1" min="0" required>
         </div>
       </div>
+
+      <label class="form-label">Ano</label>
+      <input type="number" id="es-ano" class="form-input" step="1" placeholder="Ex: 2026">
 
       <p class="form-error" id="edit-saldo-form-error"></p>
 
@@ -1353,7 +1360,7 @@ var ADMIN_PASSWORD = "admin2026";
     },
     gantt: { monthOffset: 0 },
     cal: { monthOffset: 0 },
-    saldo: { statusFilter: '' },
+    saldo: { statusFilter: '', search: '', sortKey: 'saldo', sortDir: 'asc' },
     dataSource: null,     // 'embedded' (pré-carregado) ou 'upload' (manual)
     lastUpdate: null,     // Date da última atualização dos dados
     dbRecords: [],         // registros vindos do Supabase (novos agendamentos)
@@ -1906,8 +1913,9 @@ var ADMIN_PASSWORD = "admin2026";
       : [...new Set(state.records.map(r => r.nome))];
 
     const rows = names.filter(nome => {
-      if (!state.globalSearch) return true;
-      return nome.toLowerCase().includes(state.globalSearch.toLowerCase());
+      if (state.globalSearch && !nome.toLowerCase().includes(state.globalSearch.toLowerCase())) return false;
+      if (state.saldo.search && !nome.toLowerCase().includes(state.saldo.search.toLowerCase())) return false;
+      return true;
     }).map(nome => {
       const entry = state.saldoMap[nome] || {};
       const frente = entry.frente || (state.records.find(r => r.nome === nome)?.frente) || '—';
@@ -1916,8 +1924,7 @@ var ADMIN_PASSWORD = "admin2026";
       const programados = state.records
         .filter(r => r.nome === nome && getStatus(r) !== 'ended')
         .reduce((sum, r) => sum + (r.totalDias || 0), 0);
-      const restante = saldo !== null ? Math.max(saldo - programados, 0) : null;
-      return { nome, frente, saldo, programados, restante, situacao: saldoSituacao(saldo), dbId: entry.dbId || null, dataBase: entry.dataBase || null };
+      return { nome, frente, saldo, programados, situacao: saldoSituacao(saldo), dbId: entry.dbId || null, dataBase: entry.dataBase || null, ano: entry.ano || null };
     });
 
     // resumo
@@ -1930,9 +1937,28 @@ var ADMIN_PASSWORD = "admin2026";
       <div class="saldo-stat crit"><div class="dot"><i class="fa-solid fa-circle-exclamation"></i></div><div><div class="num">${counts.crit}</div><div class="lbl">Saldo alto (&gt;20 dias)</div></div></div>
     `;
 
+    const sortKey = state.saldo.sortKey;
+    const sortDir = state.saldo.sortDir === 'desc' ? -1 : 1;
     const sorted = [...rows]
       .filter(r => !state.saldo.statusFilter || r.situacao === state.saldo.statusFilter)
-      .sort((a,b) => (a.saldo ?? 999) - (b.saldo ?? 999));
+      .sort((a, b) => {
+        let av, bv;
+        switch (sortKey) {
+          case 'nome': av = a.nome; bv = b.nome; break;
+          case 'frente': av = a.frente; bv = b.frente; break;
+          case 'dataBase': av = a.dataBase; bv = b.dataBase; break;
+          case 'programados': av = a.programados; bv = b.programados; break;
+          case 'ano': av = a.ano ?? -1; bv = b.ano ?? -1; break;
+          case 'situacao': av = a.situacao; bv = b.situacao; break;
+          case 'saldo':
+          default: av = a.saldo ?? 999; bv = b.saldo ?? 999;
+        }
+        if (av instanceof Date && bv instanceof Date) return (av - bv) * sortDir;
+        if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
+        if (av === null) av = '';
+        if (bv === null) bv = '';
+        return String(av).localeCompare(String(bv), 'pt-BR') * sortDir;
+      });
 
     document.getElementById('saldo-count').textContent = `${sorted.length} colaborador(es)`;
 
@@ -1950,18 +1976,29 @@ var ADMIN_PASSWORD = "admin2026";
         <td class="cell-name">${escapeHtml(r.nome)}</td>
         <td>${escapeHtml(r.frente)}</td>
         <td class="cell-days">${r.dataBase ? fmtDate(r.dataBase) : '—'}</td>
+        <td class="cell-days">${r.programados}</td>
         <td class="cell-days">
           <div style="display:flex;align-items:center;gap:8px;">
             <span>${r.saldo !== null ? r.saldo : '—'}</span>
             <div class="saldo-bar-track"><div class="saldo-bar-fill" style="width:${pct}%; background:${barColor};"></div></div>
           </div>
         </td>
-        <td class="cell-days">${r.programados}</td>
-        <td class="cell-days">${r.restante !== null ? r.restante : '—'}</td>
+        <td class="cell-days">${r.ano !== null ? r.ano : '—'}</td>
         <td><span class="badge ${badgeCls}">${badgeIcon} ${badgeText}</span></td>
         <td class="cell-actions">${actions}</td>
       </tr>`;
     }).join('') : `<tr class="empty-row"><td colspan="8">Nenhum dado de saldo encontrado.</td></tr>`;
+
+    // atualiza ícones de ordenação
+    document.querySelectorAll('#saldo-table thead th').forEach(th => {
+      const icon = th.querySelector('.sort-icon');
+      if (!icon) return;
+      if (th.dataset.key === state.saldo.sortKey) {
+        icon.dataset.sortIcon = state.saldo.sortDir === 'asc' ? 'up' : 'down';
+      } else {
+        icon.dataset.sortIcon = 'default';
+      }
+    });
   }
 
   /* ----------------------------------------------------------
@@ -2276,6 +2313,7 @@ var ADMIN_PASSWORD = "admin2026";
           dataBase: row.data_base ? stripTime(new Date(row.data_base + 'T00:00:00')) : null,
           diasGozados: (typeof row.dias_gozados === 'number') ? row.dias_gozados : 0,
           saldoBase: (typeof row.saldo_base === 'number') ? row.saldo_base : null,
+          ano: (typeof row.ano_fiscal === 'number') ? row.ano_fiscal : null,
           dbId: row.id
         };
       });
@@ -2808,6 +2846,7 @@ var ADMIN_PASSWORD = "admin2026";
     document.getElementById('es-data-base').value = entry.dataBase ? toInputDate(entry.dataBase) : '';
     document.getElementById('es-dias-gozados').value = entry.diasGozados ?? 0;
     document.getElementById('es-saldo-base').value = entry.saldoBase ?? '';
+    document.getElementById('es-ano').value = entry.ano ?? '';
 
     document.getElementById('edit-saldo-overlay').classList.add('visible');
   }
@@ -2822,13 +2861,19 @@ var ADMIN_PASSWORD = "admin2026";
     errorEl.textContent = '';
 
     const id = document.getElementById('es-id').value;
+    const nome = document.getElementById('es-nome').value.trim();
     const frente = document.getElementById('es-frente').value.trim();
     const dataBase = document.getElementById('es-data-base').value;
     const diasGozados = document.getElementById('es-dias-gozados').value;
     const saldoBase = document.getElementById('es-saldo-base').value;
+    const ano = document.getElementById('es-ano').value;
 
+    if (!nome) {
+      errorEl.textContent = 'Informe o nome do profissional.';
+      return;
+    }
     if (saldoBase === '') {
-      errorEl.textContent = 'Informe o saldo (ano fiscal).';
+      errorEl.textContent = 'Informe o saldo.';
       return;
     }
 
@@ -2838,10 +2883,12 @@ var ADMIN_PASSWORD = "admin2026";
 
     try {
       await updateSaldoRecord(id, {
+        nome,
         frente: frente || null,
         data_base: dataBase || null,
         dias_gozados: diasGozados !== '' ? Number(diasGozados) : 0,
-        saldo_base: Number(saldoBase)
+        saldo_base: Number(saldoBase),
+        ano_fiscal: ano !== '' ? Number(ano) : null
       });
       closeEditSaldoModal();
       await refreshDbRecords();
@@ -3030,6 +3077,7 @@ var ADMIN_PASSWORD = "admin2026";
     document.querySelectorAll('#main-table thead th').forEach(th => {
       th.addEventListener('click', () => {
         const key = th.dataset.key;
+        if (!key) return;
         if (state.table.sortKey === key) {
           state.table.sortDir = state.table.sortDir === 'asc' ? 'desc' : 'asc';
         } else {
@@ -3037,6 +3085,22 @@ var ADMIN_PASSWORD = "admin2026";
           state.table.sortDir = 'asc';
         }
         renderTable();
+      });
+    });
+
+    // busca e ordenação da tabela de saldo
+    document.getElementById('saldo-search').addEventListener('input', (e) => { state.saldo.search = e.target.value; renderSaldoPanel(); });
+    document.querySelectorAll('#saldo-table thead th').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key;
+        if (!key) return;
+        if (state.saldo.sortKey === key) {
+          state.saldo.sortDir = state.saldo.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.saldo.sortKey = key;
+          state.saldo.sortDir = 'asc';
+        }
+        renderSaldoPanel();
       });
     });
 
